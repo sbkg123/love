@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>可以成为我的恋人吗？</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            min-height: 100vh;
+            background-color: #fadadd;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: "Microsoft YaHei", sans-serif;
+            transition: all 0.5s ease;
+        }
+        .container {
+            text-align: center;
+            padding: 20px;
+            transition: all 0.5s ease;
+        }
+        /* 图片样式 */
+        .love-img {
+            width: 220px;
+            border-radius: 12px;
+            margin-bottom: 35px;
+            transition: all 0.5s ease;
+        }
+        /* 全屏哭哭图样式 */
+        .cry-img-full {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            object-fit: contain;
+            background-color: #fadadd;
+            display: none;
+            z-index: 999;
+        }
+        .question {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 40px;
+        }
+        .buttons {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            align-items: center;
+        }
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+        .btn-yes {
+            background-color: #d9534f;
+            color: white;
+            font-size: 18px;
+        }
+        .btn-no {
+            background-color: #428bca;
+            color: white;
+        }
+        .success {
+            display: none;
+            font-size: 28px;
+            color: #d9534f;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+        /* 隐藏容器样式 */
+        .hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- 初始容器 -->
+    <div class="container" id="main">
+        <!-- 替换为你新提供的初始图片 -->
+        <img class="love-img" id="mainImg" src="https://p3-flow-imagex-download-sign.byteimg.com/tos-cn-i-a9rns2rl98/5e40fc94904d419fa3a724ba1dd602cc.jpeg~tplv-a9rns2rl98-24:720:720.jpeg?lk3s=8e244e95&rcl=20260426105345A86DEEB4EB76433EAF4F&rrcfp=8a172a1a&x-expires=1777776825&x-signature=YtZdy7TOIG6anAi9acK8l4ieCqE%3D" alt="小狗贴贴">
+        
+        <p class="question">可以成为我的恋人吗？</p>
+        <div class="buttons">
+            <button class="btn btn-yes" id="yesBtn" onclick="sayYes()">可以</button>
+            <button class="btn btn-no" id="noBtn" onclick="clickNo()">不要</button>
+        </div>
+    </div>
+
+    <!-- 同意后的成功提示 -->
+    <div class="success" id="success">
+        我就知道你会同意！❤️
+    </div>
+
+    <!-- 全屏哭哭图 -->
+    <img class="cry-img-full" id="cryImg" src="https://p3-flow-imagex-download-sign.byteimg.com/tos-cn-i-a9rns2rl98/21afb684608b445d81173cee800fb7ce.jpg~tplv-a9rns2rl98-24:720:720.jpeg?lk3s=8e244e95&rcl=20260426104121CD7CF05DD3BD2787BAF2&rrcfp=8a172a1a&x-expires=1777776082&x-signature=76LAA%2F09qkCMn6rEojghCM3MAWQ%3D" alt="哭哭小狗">
+
+    <script>
+        // 拒绝按钮的文字序列
+        const noTexts = [
+            "不要",
+            "你认真的吗？",
+            "你要不要再想想！",
+            "不要选这个",
+            "事不过三，我放弃了"
+        ];
+        let clickCount = 0; // 记录点击次数
+        let isFinalText = false; // 标记是否显示到最后一句文字
+        const yesBtn = document.getElementById('yesBtn');
+        const noBtn = document.getElementById('noBtn');
+        const mainImg = document.getElementById('mainImg');
+        const mainContainer = document.getElementById('main');
+        const successDiv = document.getElementById('success');
+        const cryImg = document.getElementById('cryImg');
+        
+        // 第一张图地址（同意后显示）
+        const yesImgUrl = "https://p11-flow-imagex-download-sign.byteimg.com/tos-cn-i-a9rns2rl98/bc64b5148e194fe38ad97c3bc479fa61.jpeg~tplv-a9rns2rl98-24:720:720.jpeg?lk3s=8e244e95&rcl=20260426104121CD7CF05DD3BD2787BAF2&rrcfp=8a172a1a&x-expires=1777776082&x-signature=kYfIVPWice7vCZXmuEicvdghr7Y%3D";
+
+        // 点击同意
+        function sayYes() {
+            mainImg.src = yesImgUrl;
+            mainImg.style.width = "280px";
+            document.querySelector('.buttons').style.display = 'none';
+            document.querySelector('.question').style.display = 'none';
+            successDiv.style.display = 'block';
+        }
+
+        // 点击拒绝（彻底重构逻辑）
+        function clickNo() {
+            // 第一步：判断是否还没到最后一句文字
+            if (!isFinalText) {
+                clickCount++;
+                // 切换到对应文字
+                noBtn.innerText = noTexts[clickCount];
+                // 放大同意按钮（保留原有效果）
+                let currentSize = parseInt(window.getComputedStyle(yesBtn).fontSize);
+                yesBtn.style.fontSize = (currentSize + 3) + "px";
+                yesBtn.style.padding = (12 + clickCount*2) + "px " + (30 + clickCount*4) + "px";
+                
+                // 当切换到最后一句文字时，标记状态
+                if (clickCount === noTexts.length - 1) {
+                    isFinalText = true;
+                }
+            } else {
+                // 第二步：只有显示「事不过三，我放弃了」后点击，才触发全屏
+                mainContainer.classList.add('hidden');
+                cryImg.style.display = 'block';
+                document.body.style.background = '#fadadd';
+            }
+        }
+    </script>
+</body>
+</html>
