@@ -2,7 +2,9 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <!-- 微信网页开发必备meta，解决音频播放限制 -->
+    <meta name="referrer" content="no-referrer">
     <title>可以成为我的宝宝吗？</title>
     <style>
         * {
@@ -19,6 +21,7 @@
             justify-content: center;
             font-family: "Microsoft YaHei", sans-serif;
             transition: all 0.5s ease;
+            touch-action: manipulation; /* 优化微信点击响应 */
         }
         .container {
             text-align: center;
@@ -63,6 +66,7 @@
             cursor: pointer;
             transition: all 0.3s ease;
             white-space: nowrap;
+            -webkit-tap-highlight-color: transparent; /* 去掉微信点击高亮 */
         }
         .btn-yes {
             background-color: #d9534f;
@@ -85,30 +89,36 @@
             opacity: 0;
             pointer-events: none;
         }
-        /* 音乐控件样式（隐藏，仅调试用） */
+        /* 音乐控件（微信下强制隐藏，仅调试用） */
         audio {
             position: fixed;
             bottom: 20px;
             left: 20px;
-            opacity: 0.1; /* 透明，想显示改1 */
+            opacity: 0;
             z-index: 1000;
         }
-        audio:hover {
-            opacity: 1; /* 鼠标移上去显示控件 */
+        /* 可选：添加点击提示（首次打开微信显示） */
+        .wechat-tip {
+            position: fixed;
+            top: 20px;
+            color: #666;
+            font-size: 14px;
+            display: none; /* 默认隐藏，微信环境显示 */
         }
     </style>
 </head>
 <body>
-    <!-- 同意音乐（欢快）- GitHub仓库链接 -->
-    <audio id="yesMusic" loop preload="auto">
+    <!-- 微信点击提示（可选） -->
+    <div class="wechat-tip" id="wechatTip">点击按钮即可播放音乐哦～</div>
+
+    <!-- 同意音乐（GitHub链接） -->
+    <audio id="yesMusic" loop preload="auto" x5-playsinline playsinline webkit-playsinline>
         <source src="https://raw.githubusercontent.com/sbkg123/love/main/123123.mp3" type="audio/mpeg">
-        你的浏览器不支持音频播放
     </audio>
 
-    <!-- 拒绝音乐（悲伤）- GitHub仓库链接 -->
-    <audio id="noMusic" loop preload="auto">
+    <!-- 拒绝音乐（GitHub链接） -->
+    <audio id="noMusic" loop preload="auto" x5-playsinline playsinline webkit-playsinline>
         <source src="https://raw.githubusercontent.com/sbkg123/love/main/12341234.mp3" type="audio/mpeg">
-        你的浏览器不支持音频播放
     </audio>
 
     <!-- 初始容器 -->
@@ -117,8 +127,8 @@
         
         <p class="question">可以成为我的宝宝吗？</p>
         <div class="buttons">
-            <button class="btn btn-yes" id="yesBtn" onclick="sayYes()">可以</button>
-            <button class="btn btn-no" id="noBtn" onclick="clickNo()">不要</button>
+            <button class="btn btn-yes" id="yesBtn">可以</button>
+            <button class="btn btn-no" id="noBtn">不要</button>
         </div>
     </div>
 
@@ -126,10 +136,16 @@
     <img class="cry-img-full" id="cryImg" src="https://p26-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/9e8b435320ac42799444083108b1d7ba.jpeg~tplv-a9rns2rl98-image.png?lk3s=8e244e95&rcl=202604271803038424A005BCAD9C120303&rrcfp=dafada99&x-expires=2093508183&x-signature=Jc3V2a8rms%2BIsK0sLjfd54zaBLE%3D" alt="对不起小狗">
 
     <script>
+        // 检测是否是微信环境
+        function isWeChat() {
+            return /MicroMessenger/i.test(navigator.userAgent);
+        }
+
+        // 全局变量
         const noTexts = ["不要","你认真的吗？","你要不要再想想！","不要选这个","事不过三，我放弃了"];
         let clickCount = 0;
         let isFinalText = false;
-        let isNoMusicPlayed = false; // 标记拒绝音乐是否已播放
+        let isNoMusicPlayed = false;
         
         // 获取元素
         const yesBtn = document.getElementById('yesBtn');
@@ -140,51 +156,51 @@
         const cryImg = document.getElementById('cryImg');
         const yesMusic = document.getElementById('yesMusic');
         const noMusic = document.getElementById('noMusic');
+        const wechatTip = document.getElementById('wechatTip');
         
         // 图片地址
         const yesImgUrl = "https://p11-flow-imagex-download-sign.byteimg.com/tos-cn-i-a9rns2rl98/bc64b5148e194fe38ad97c3bc479fa61.jpeg~tplv-a9rns2rl98-24:720:720.jpeg?lk3s=8e244e95&rcl=20260426104121CD7CF05DD3BD2787BAF2&rrcfp=8a172a1a&x-expires=1777776082&x-signature=kYfIVPWice7vCZXmuEicvdghr7Y%3D";
 
-        // 播放音乐通用函数（停止另一种音乐，强制循环）
-        function playTargetMusic(targetMusic, otherMusic) {
+        // 微信适配：强制通过用户点击播放音频
+        function playMusicInWechat(audioEl) {
+            // 停止另一个音乐
+            const otherAudio = audioEl === yesMusic ? noMusic : yesMusic;
+            otherAudio.pause();
+            otherAudio.currentTime = 0;
+
+            // 微信下强制设置
+            audioEl.loop = true;
+            audioEl.volume = 0.6; // 微信下音量稍大一点更明显
+            
+            // 核心：通过用户点击直接触发（去掉异步包装，微信认直接点击）
             try {
-                // 强制开启循环（确保GitHub音乐也循环）
-                targetMusic.loop = true;
-                // 停止另一种音乐并重置进度
-                otherMusic.pause();
-                otherMusic.currentTime = 0;
-                
-                // 设置音量并播放目标音乐
-                targetMusic.volume = 0.5; // 音量0-1，可调整
-                targetMusic.play().catch(err => {
-                    // 浏览器限制：点击页面任意位置触发播放
-                    document.body.addEventListener('click', () => {
-                        targetMusic.play();
-                    }, { once: true });
-                });
-            } catch (err) {
-                console.log("音乐播放失败：", err);
+                audioEl.play();
+            } catch (e) {
+                // 兜底：再次尝试（微信偶尔第一次点击失败）
+                setTimeout(() => {
+                    audioEl.play();
+                }, 100);
             }
         }
 
-        // 同意按钮逻辑（播放欢快音乐）
-        function sayYes() {
-            // 播放同意音乐，停止拒绝音乐
-            playTargetMusic(yesMusic, noMusic);
+        // 同意按钮点击事件（微信适配版）
+        yesBtn.addEventListener('click', function() {
+            // 先播放音乐，再执行原有逻辑
+            playMusicInWechat(yesMusic);
             
-            // 原有逻辑
             mainImg.src = yesImgUrl;
             mainImg.style.width = "280px";
             document.querySelector('.buttons').style.display = 'none';
             document.querySelector('.question').style.display = 'none';
             successDiv.style.display = 'block';
-        }
+        });
 
-        // 拒绝按钮逻辑（播放悲伤音乐）
-        function clickNo() {
-            // 首次点击不要时播放拒绝音乐（仅播放一次）
+        // 拒绝按钮点击事件（微信适配版）
+        noBtn.addEventListener('click', function() {
+            // 首次点击播放拒绝音乐
             if (!isNoMusicPlayed) {
-                playTargetMusic(noMusic, yesMusic);
-                isNoMusicPlayed = true; // 标记已播放，避免重复触发
+                playMusicInWechat(noMusic);
+                isNoMusicPlayed = true;
             }
 
             // 原有逻辑
@@ -204,7 +220,20 @@
                 cryImg.style.display = 'block';
                 document.body.style.background = '#fadadd';
             }
-        }
+        });
+
+        // 页面加载后：微信环境显示提示
+        window.onload = function() {
+            if (isWeChat()) {
+                wechatTip.style.display = 'block';
+            }
+            // 预加载音频（微信下提前加载，避免点击时卡顿）
+            yesMusic.load();
+            noMusic.load();
+        };
+
+        // 微信兼容：禁止浏览器默认行为干扰
+        document.addEventListener('touchstart', function(e) {}, { passive: true });
     </script>
 </body>
 </html>
