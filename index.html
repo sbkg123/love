@@ -85,12 +85,34 @@
             opacity: 0;
             pointer-events: none;
         }
+        /* 音乐控件样式（隐藏，仅调试用） */
+        audio {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            opacity: 0.1; /* 透明，想显示改1 */
+            z-index: 1000;
+        }
+        audio:hover {
+            opacity: 1; /* 鼠标移上去显示控件 */
+        }
     </style>
 </head>
 <body>
+    <!-- 同意音乐（欢快）- GitHub仓库链接 -->
+    <audio id="yesMusic" loop preload="auto">
+        <source src="https://raw.githubusercontent.com/sbkg123/love/main/123123.mp3" type="audio/mpeg">
+        你的浏览器不支持音频播放
+    </audio>
+
+    <!-- 拒绝音乐（悲伤）- GitHub仓库链接 -->
+    <audio id="noMusic" loop preload="auto">
+        <source src="https://raw.githubusercontent.com/sbkg123/love/main/12341234.mp3" type="audio/mpeg">
+        你的浏览器不支持音频播放
+    </audio>
+
     <!-- 初始容器 -->
     <div class="container" id="main">
-        <!-- 初始图片 -->
         <img class="love-img" id="mainImg" src="https://p3-flow-imagex-download-sign.byteimg.com/tos-cn-i-a9rns2rl98/5e40fc94904d419fa3a724ba1dd602cc.jpeg~tplv-a9rns2rl98-24:720:720.jpeg?lk3s=8e244e95&rcl=20260426105345A86DEEB4EB76433EAF4F&rrcfp=8a172a1a&x-expires=1777776825&x-signature=YtZdy7TOIG6anAi9acK8l4ieCqE%3D" alt="小狗贴贴">
         
         <p class="question">可以成为我的宝宝吗？</p>
@@ -100,37 +122,56 @@
         </div>
     </div>
 
-    <!-- 同意后的成功提示 -->
-    <div class="success" id="success">
-        我就知道你会同意！❤️
-    </div>
-
-    <!-- 替换为你最新提供的图片 -->
+    <div class="success" id="success">我就知道你会同意！❤️</div>
     <img class="cry-img-full" id="cryImg" src="https://p26-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/9e8b435320ac42799444083108b1d7ba.jpeg~tplv-a9rns2rl98-image.png?lk3s=8e244e95&rcl=202604271803038424A005BCAD9C120303&rrcfp=dafada99&x-expires=2093508183&x-signature=Jc3V2a8rms%2BIsK0sLjfd54zaBLE%3D" alt="对不起小狗">
 
     <script>
-        // 拒绝按钮的文字序列
-        const noTexts = [
-            "不要",
-            "你认真的吗？",
-            "你要不要再想想！",
-            "不要选这个",
-            "事不过三，我放弃了"
-        ];
-        let clickCount = 0; // 记录点击次数
-        let isFinalText = false; // 标记是否显示到最后一句文字
+        const noTexts = ["不要","你认真的吗？","你要不要再想想！","不要选这个","事不过三，我放弃了"];
+        let clickCount = 0;
+        let isFinalText = false;
+        let isNoMusicPlayed = false; // 标记拒绝音乐是否已播放
+        
+        // 获取元素
         const yesBtn = document.getElementById('yesBtn');
         const noBtn = document.getElementById('noBtn');
         const mainImg = document.getElementById('mainImg');
         const mainContainer = document.getElementById('main');
         const successDiv = document.getElementById('success');
         const cryImg = document.getElementById('cryImg');
+        const yesMusic = document.getElementById('yesMusic');
+        const noMusic = document.getElementById('noMusic');
         
-        // 第一张图地址（同意后显示）
+        // 图片地址
         const yesImgUrl = "https://p11-flow-imagex-download-sign.byteimg.com/tos-cn-i-a9rns2rl98/bc64b5148e194fe38ad97c3bc479fa61.jpeg~tplv-a9rns2rl98-24:720:720.jpeg?lk3s=8e244e95&rcl=20260426104121CD7CF05DD3BD2787BAF2&rrcfp=8a172a1a&x-expires=1777776082&x-signature=kYfIVPWice7vCZXmuEicvdghr7Y%3D";
 
-        // 点击同意
+        // 播放音乐通用函数（停止另一种音乐，强制循环）
+        function playTargetMusic(targetMusic, otherMusic) {
+            try {
+                // 强制开启循环（确保GitHub音乐也循环）
+                targetMusic.loop = true;
+                // 停止另一种音乐并重置进度
+                otherMusic.pause();
+                otherMusic.currentTime = 0;
+                
+                // 设置音量并播放目标音乐
+                targetMusic.volume = 0.5; // 音量0-1，可调整
+                targetMusic.play().catch(err => {
+                    // 浏览器限制：点击页面任意位置触发播放
+                    document.body.addEventListener('click', () => {
+                        targetMusic.play();
+                    }, { once: true });
+                });
+            } catch (err) {
+                console.log("音乐播放失败：", err);
+            }
+        }
+
+        // 同意按钮逻辑（播放欢快音乐）
         function sayYes() {
+            // 播放同意音乐，停止拒绝音乐
+            playTargetMusic(yesMusic, noMusic);
+            
+            // 原有逻辑
             mainImg.src = yesImgUrl;
             mainImg.style.width = "280px";
             document.querySelector('.buttons').style.display = 'none';
@@ -138,24 +179,27 @@
             successDiv.style.display = 'block';
         }
 
-        // 点击拒绝（原有逻辑完全不变）
+        // 拒绝按钮逻辑（播放悲伤音乐）
         function clickNo() {
-            // 第一步：判断是否还没到最后一句文字
+            // 首次点击不要时播放拒绝音乐（仅播放一次）
+            if (!isNoMusicPlayed) {
+                playTargetMusic(noMusic, yesMusic);
+                isNoMusicPlayed = true; // 标记已播放，避免重复触发
+            }
+
+            // 原有逻辑
             if (!isFinalText) {
                 clickCount++;
-                // 切换到对应文字
                 noBtn.innerText = noTexts[clickCount];
-                // 放大同意按钮（保留原有效果）
+                
                 let currentSize = parseInt(window.getComputedStyle(yesBtn).fontSize);
                 yesBtn.style.fontSize = (currentSize + 3) + "px";
                 yesBtn.style.padding = (12 + clickCount*2) + "px " + (30 + clickCount*4) + "px";
                 
-                // 当切换到最后一句文字时，标记状态
                 if (clickCount === noTexts.length - 1) {
                     isFinalText = true;
                 }
             } else {
-                // 第二步：只有显示「事不过三，我放弃了」后点击，才触发全屏
                 mainContainer.classList.add('hidden');
                 cryImg.style.display = 'block';
                 document.body.style.background = '#fadadd';
